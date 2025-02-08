@@ -7,15 +7,15 @@ const Testimonials = () => {
     return (
         <div className='signlang_testimonials-container section__padding'>
             <div className="signlang_testimonial-header">
-                <h2 className='gradient__text'>Here are the Feedback given by the users and domain experts
+                <h2 className='gradient__text'>
                 </h2>
             </div>
 
-            <div className="signlang_card-container">
+            {/* <div className="signlang_card-container">
                {userFeedback.map((data,i)=>(
                   <Card title={data.title} text={data.text} tag={data.tag} key={i*991}/>
                ))}
-            </div>
+            </div> */}
         </div>
     )
 }

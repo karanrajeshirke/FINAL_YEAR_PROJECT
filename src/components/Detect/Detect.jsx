@@ -5,7 +5,6 @@ import { FilesetResolver, GestureRecognizer } from "@mediapipe/tasks-vision";
 import {
   drawConnectors,
   drawLandmarks,
-  // HAND_CONNECTIONS,
 } from "@mediapipe/drawing_utils";
 
 import { HAND_CONNECTIONS } from "@mediapipe/hands";
@@ -35,8 +34,6 @@ const Detect = () => {
 
   const user = useSelector((state) => state.auth?.user);
 
-  const { accessToken } = useSelector((state) => state.auth);
-
   const dispatch = useDispatch();
 
   const [currentImage, setCurrentImage] = useState(null);
@@ -53,12 +50,22 @@ const Detect = () => {
     return () => clearInterval(intervalId);
   }, [webcamRunning]);
 
-  if (
-    process.env.NODE_ENV === "development" ||
-    process.env.NODE_ENV === "production"
-  ) {
-    console.log = function () {};
-  }
+  useEffect(() => {
+    async function loadGestureRecognizer() {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+      const recognizer = await GestureRecognizer.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: process.env.REACT_APP_MODEL_URL,
+        },
+        numHands: 2,
+        runningMode: runningMode,
+      });
+      setGestureRecognizer(recognizer);
+    }
+    loadGestureRecognizer();
+  }, [runningMode]);
 
   const predictWebcam = useCallback(() => {
     if (runningMode === "IMAGE") {
@@ -84,15 +91,12 @@ const Detect = () => {
     const videoWidth = webcamRef.current.video.videoWidth;
     const videoHeight = webcamRef.current.video.videoHeight;
 
-    // Set video width
     webcamRef.current.video.width = videoWidth;
     webcamRef.current.video.height = videoHeight;
 
-    // Set canvas height and width
     canvasRef.current.width = videoWidth;
     canvasRef.current.height = videoHeight;
 
-    // Draw the results on the canvas, if any.
     if (results.landmarks) {
       for (const landmarks of results.landmarks) {
         drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
@@ -140,18 +144,15 @@ const Detect = () => {
       setCurrentImage(null);
 
       const endTime = new Date();
-
       const timeElapsed = (
         (endTime.getTime() - startTime.getTime()) /
         1000
       ).toFixed(2);
 
-      // Remove empty values
       const nonEmptyData = detectedData.filter(
         (data) => data.SignDetected !== "" && data.DetectedScore !== ""
       );
 
-      //to filter continous same signs in an array
       const resultArray = [];
       let current = nonEmptyData[0];
 
@@ -164,7 +165,6 @@ const Detect = () => {
 
       resultArray.push(current);
 
-      //calculate count for each repeated sign
       const countMap = new Map();
 
       for (const item of resultArray) {
@@ -180,17 +180,18 @@ const Detect = () => {
         .slice(0, 5)
         .map(([sign, count]) => ({ SignDetected: sign, count }));
 
-      // object to send to action creator
       const data = {
         signsPerformed: outputArray,
         id: uuidv4(),
-        username: user?.name,
-        userId: user?.userId,
+        username: user?.name || "Guest",
+        userId: user?.userId || "Guest",
         createdAt: String(endTime),
         secondsSpent: Number(timeElapsed),
       };
 
-      dispatch(addSignData(data));
+      if (user) {
+        dispatch(addSignData(data));
+      }
       setDetectedData([]);
     } else {
       setWebcamRunning(true);
@@ -207,77 +208,42 @@ const Detect = () => {
     dispatch,
   ]);
 
-  useEffect(() => {
-    async function loadGestureRecognizer() {
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-      );
-      const recognizer = await GestureRecognizer.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            process.env.REACT_APP_FIREBASE_STORAGE_TRAINED_MODEL_25_04_2023,
-        },
-        numHands: 2,
-        runningMode: runningMode,
-      });
-      setGestureRecognizer(recognizer);
-    }
-    loadGestureRecognizer();
-  }, [runningMode]);
-
   return (
     <>
       <div className="signlang_detection-container">
-        {accessToken ? (
-          <>
-            <div style={{ position: "relative" }}>
-              <Webcam
-                audio={false}
-                ref={webcamRef}
-                // screenshotFormat="image/jpeg"
-                className="signlang_webcam"
-              />
+        <div style={{ position: "relative" }}>
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            className="signlang_webcam"
+          />
 
-              <canvas ref={canvasRef} className="signlang_canvas" />
+          <canvas ref={canvasRef} className="signlang_canvas" />
 
-              <div className="signlang_data-container">
-                <button onClick={enableCam}>
-                  {webcamRunning ? "Stop" : "Start"}
-                </button>
+          <div className="signlang_data-container">
+            <button onClick={enableCam}>
+              {webcamRunning ? "Stop" : "Start"}
+            </button>
 
-                <div className="signlang_data">
-                  <p className="gesture_output">{gestureOutput}</p>
-
-                  {progress ? <ProgressBar progress={progress} /> : null}
-                </div>
-              </div>
-            </div>
-
-            <div className="signlang_imagelist-container">
-              <h2 className="gradient__text">Image</h2>
-
-              <div className="signlang_image-div">
-                {currentImage ? (
-                  <img src={currentImage.url} alt={`img ${currentImage.id}`} />
-                ) : (
-                  <h3 className="gradient__text">
-                    Click on the Start Button <br /> to practice with Images
-                  </h3>
-                )}
-              </div>
-            </div>
-          </>
-        ) : 
-        (
-          <div className="signlang_detection_notLoggedIn">
-
-             <h1 className="gradient__text">Please Login !</h1>
-             <img src={DisplayImg} alt="diplay-img"/>
-             <p>
-              We Save Your Detection Data to show your progress and learning in dashboard, So please Login to Test this Detection Feature.
-             </p>
+            <div className="signlang_data">
+              <p className="gesture_output">{gestureOutput}</p>
+              {progress ? <ProgressBar progress={progress} /> : null}
+            </div>x
           </div>
-        )}
+        </div>
+
+        <div className="signlang_imagelist-container">
+          {/* <h2 className="gradient__text">Image</h2> */}
+          {/* <div className="signlang_image-div">
+            {currentImage ? (
+              <img src={currentImage.url} alt={`img ${currentImage.id}`} />
+            ) : (
+              <h3 className="gradient__text">
+                Click on the Start Button <br /> to practice with Images
+              </h3>
+            )}
+          </div> */}
+        </div>
       </div>
     </>
   );
