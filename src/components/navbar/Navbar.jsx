@@ -54,6 +54,10 @@ const Navbar = ({ notifyMsg }) => {
             <Link to="/detect">Detect</Link>
           </p>
 
+          <p>
+            <Link to="/assess">Assess</Link>
+          </p>
+
           {/* <p>
             <Link to="/guide">Guide</Link>
           </p> */}

@@ -8,12 +8,13 @@ import {
   NotFound,
   Dashboard,
 } from "./components";
+import Assess from './components/assess/Assess.jsx';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const notifyMsg = (type, msg) => {
   if (type === "success") {
-    const notify = () => toast.success(msg);
+    const notify = () => toast.success( msg);
     notify();
   } else {
     const notify = () => toast.error(msg);
@@ -52,6 +53,16 @@ function App() {
           element={
             <Layout>
               <Detect />
+            </Layout>
+          }
+        />
+
+        <Route
+          exact
+          path="/assess"
+          element={
+            <Layout>
+              <Assess />
             </Layout>
           }
         />
